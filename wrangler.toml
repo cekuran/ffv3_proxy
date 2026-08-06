@@ -1,0 +1,12 @@
+name = "finanzas-cors-proxy"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# TARGET se puede sobreescribir por entorno:
+#   wrangler dev --var TARGET:https://otro/exec
+#   wrangler deploy --var TARGET:https://otro/exec
+[vars]
+TARGET = "https://script.google.com/macros/s/AKfycbwn-PA9kxM6ZocrXL7T0wGb8UhP8fqiHJ_9235QCDzyRkiV5Ihz6VmLmC51go3JBSyv/exec"
+
+[dev]
+port = 8787
