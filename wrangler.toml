@@ -6,7 +6,7 @@ compatibility_date = "2024-09-23"
 #   wrangler dev --var TARGET:https://otro/exec
 #   wrangler deploy --var TARGET:https://otro/exec
 [vars]
-TARGET = "https://script.google.com/macros/s/AKfycbxv3miAtMT29D9_R8BObM3IZpONcZDHHRYU37j4Px7nbqccXi3Q1Z5yIC64eUxoID1k/exec"
+TARGET = "https://script.google.com/macros/s/AKfycbyT7IK7yvO0w7ys-w1zUf5PE1-ScRgywjHpjsNSSDNN6DkyNeQ_DfgzXRN9_h3sy2_Z/exec"
 
 [dev]
 port = 8787
