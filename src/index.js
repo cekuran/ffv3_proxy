@@ -9,9 +9,9 @@ const CORS = {
 
 // ponytail: Apps Script cold start (1ª llamada tras deploy) puede tardar 30-60s.
 // El plan gratuito de CF mata workers a los 30s wall-clock, así que el cap
-// efectivo es ~28s. El env var UPSTREAM_TIMEOUT_MS permite subirlo en planes
+// efectivo es ~29s. El env var UPSTREAM_TIMEOUT_MS permite subirlo en planes
 // de pago (Bundled/Unbound) donde el límite wall-clock se eleva.
-const DEFAULT_UPSTREAM_TIMEOUT_MS = 28000;
+const DEFAULT_UPSTREAM_TIMEOUT_MS = 29000;
 
 export default {
   async fetch(request, env) {
