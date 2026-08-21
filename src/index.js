@@ -1,4 +1,3 @@
-const DEFAULT_TARGET = 'https://script.google.com/macros/s/AKfycbwn-PA9kxM6ZocrXL7T0wGb8UhP8fqiHJ_9235QCDzyRkiV5Ihz6VmLmC51go3JBSyv/exec';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -19,7 +18,7 @@ export default {
       return new Response(null, { status: 204, headers: CORS });
     }
 
-    const target = (env && env.TARGET) || DEFAULT_TARGET;
+    const target = (env && env.TARGET);
     const UPSTREAM_TIMEOUT_MS = Number((env && env.UPSTREAM_TIMEOUT_MS) || DEFAULT_UPSTREAM_TIMEOUT_MS);
     const headers = new Headers(request.headers);
     headers.set('Host', new URL(target).host);
