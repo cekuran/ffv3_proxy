@@ -3,7 +3,7 @@
 // idempotentes una vez calculada la respuesta, así que no reintentamos manualmente.
 // El cap real es el wall-clock de Cloudflare (30s free, configurable en planes
 // de pago); el frontend ya reintienta cold-starts con backoff 30s+15s.
-const DEFAULT_TARGET = 'https://script.google.com/macros/s/AKfycbwn-PA9kxM6ZocrXL7T0wGb8UhP8fqiHJ_9235QCDzyRkiV5Ihz6VmLmC51go3JBSyv/exec';
+const DEFAULT_TARGET = 'https://script.google.com/macros/s/AKfycby5G9NL81H7NUhrU37B4Zc2C3yaAJLUFdQ5xMLdNR5XZhGfgfw3sBZmvusUueXvPSTKhw/exec';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -21,15 +21,22 @@ export default {
     const target = (env && env.TARGET) || DEFAULT_TARGET;
     // Apps Script valida el Host: reescribir el que arrastra el navegador
     // (cloudflare.com) al del Web App de destino.
-    const headers = new Headers(request.headers);
-    headers.set('Host', new URL(target).host);
+    const headers = new Headers();
+    const ct = request.headers.get('Content-Type');
+    if (ct) headers.set('Content-Type', ct);
 
     try {
-      const init = { method: request.method, headers };
+      const init = { method: request.method, headers, redirect: 'manual' };
       if (request.method !== 'GET' && request.method !== 'HEAD') {
         init.body = await request.text();
       }
-      const upstream = await fetch(target, init);
+      let upstream = await fetch(target, init);
+      // Apps Script responde 302 → URL con el resultado; se sigue con GET.
+      for (let i = 0; i < 5 && upstream.status >= 300 && upstream.status < 400; i++) {
+        const loc = upstream.headers.get('Location');
+        if (!loc) break;
+        upstream = await fetch(new URL(loc, target).toString(), { method: 'GET', redirect: 'manual' });
+      }
       const out = new Response(upstream.body, upstream);
       for (const [k, v] of Object.entries(CORS)) out.headers.set(k, v);
       return out;
