@@ -1,33 +1,67 @@
 # tasktime-cors-proxy
 
-Cloudflare Worker that forwards browser `fetch()` calls to the Google Apps
-Script WebApp for [TaskTime](../). The Worker adds permissive CORS headers
-so a static frontend served from any origin can call the Apps Script `doPost`
-endpoint, which refuses cross-origin requests by default.
-
-The target URL is read from the `[vars].TARGET` field in `wrangler.toml` and
-overridden at deploy time by the deploy script (`tools/Set-ApiDeployment.ps1`).
+Cloudflare Worker (`src/index.js`) que reenvía las llamadas `fetch()` del navegador al WebApp de Google Apps Script de TaskTime. Añade cabeceras CORS permisivas para que el frontend estático, servido desde cualquier origen, pueda hacer `POST` contra `doPost`, que Apps Script no permite entre orígenes.
 
 ```
-browser → Worker → Apps Script WebApp (/exec) → Sheets
+frontend → Worker (Cloudflare) → Apps Script WebApp (/exec) → Google Sheets
 ```
 
-## Develop locally
+## Comportamiento
 
+- `OPTIONS` → responde `204` con las cabeceras CORS (preflight).
+- `GET` / `POST` → reenvía al `TARGET`, conservando solo `Content-Type`. Apps Script valida el `Host`, así que no se arrastran las cabeceras del navegador.
+- Redirects: Apps Script responde `302` (`/exec` → `script.googleusercontent.com`). El Worker los sigue manualmente con `GET` (hasta 5 saltos).
+- Toda respuesta lleva CORS (`Access-Control-Allow-Origin: *`, métodos `GET,POST,OPTIONS`).
+- Error de red/upstream → `502` con `Proxy error: <mensaje>`.
+- El tope real es el wall-clock de Cloudflare (30 s en plan gratuito). Durante un cold-start de Apps Script puede aparecer un `504`; el frontend reintenta con espera.
+
+## Configuración
+
+[wrangler.toml](wrangler.toml):
+
+| Clave | Valor |
+|-------|-------|
+| `name` | `tasktime-cors-proxy` |
+| `main` | `src/index.js` |
+| `[vars].TARGET` | URL `/exec` del deployment de Apps Script |
+| `[dev].port` | `8787` |
+
+`TARGET` se puede sobrescribir por entorno:
+
+```bash
+npx wrangler dev --var TARGET:https://script.google.com/macros/s/<ID>/exec
+npx wrangler deploy --var TARGET:https://script.google.com/macros/s/<ID>/exec
 ```
+
+Si `TARGET` no está definido, se usa `DEFAULT_TARGET` de `src/index.js`. Cuando cambie el `DeploymentId` de Apps Script, actualizar ambos.
+
+## Desarrollo local
+
+```bash
+cd proxy
 npm install
-npm run dev          # serves on http://127.0.0.1:8787
+npm run dev          # http://127.0.0.1:8787
 ```
 
-Point `frontend/index.html`'s `API_URL` at `http://127.0.0.1:8787` to test
-end-to-end against the live Apps Script deployment. Use option 2 in the
-deploy script to keep this in sync.
+Apuntar `API_URL` de [../frontend/index.html](../frontend/index.html) a `http://127.0.0.1:8787`. La opción 8 de [../tools/Set-ApiDeployment.ps1](../tools/Set-ApiDeployment.ps1) arranca el Worker local y puede reescribir `API_URL` automáticamente.
 
-## Deploy
+## Despliegue
 
-Run option 5 of [`../tools/Set-ApiDeployment.ps1`](../tools/Set-ApiDeployment.ps1),
-or directly:
+Requiere sesión de Wrangler (`npx wrangler login`).
 
-```
+```bash
+cd proxy
 npm run deploy
+```
+
+O con el script orquestado, opción 5 de `pwsh ./tools/Set-ApiDeployment.ps1`: despliega, guarda la URL en `[cloudflare]` de [../release_info.txt](../release_info.txt) y ofrece actualizar `API_URL` en el frontend.
+
+## Estructura
+
+```
+proxy/
+├── src/index.js      # Worker
+├── wrangler.toml     # nombre, TARGET, puerto de dev
+├── package.json      # scripts dev/deploy, wrangler ^4
+└── .gitignore
 ```
